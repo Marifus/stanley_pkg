@@ -31,6 +31,7 @@ namespace stanley
 
         bool ReadParameters();
         void PathCallback(const nav_msgs::Odometry::ConstPtr& msg);
+        //void PathCallback(const nav_msgs::Path::ConstPtr& msg);
         void OdomCallback(const nav_msgs::Odometry::ConstPtr& msg);
         void ControlOutput();
         double StanleyAlgorithm(const geometry_msgs::Pose& current_point_pose, const nav_msgs::Path& t_path, double current_velocity, double Kcte, double Kv);

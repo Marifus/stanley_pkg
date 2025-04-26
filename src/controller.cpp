@@ -11,8 +11,8 @@ namespace stanley
             ros::requestShutdown();
         }
 
-        path_sub = nh_.subscribe("/odom", 10, &Stanley::PathCallback, this);
-        odom_sub = nh_.subscribe("/odom_sim", 10, &Stanley::OdomCallback, this);
+        path_sub = nh_.subscribe("/shortest_path", 10, &Stanley::PathCallback, this);
+        odom_sub = nh_.subscribe("/odom", 10, &Stanley::OdomCallback, this);
         path_pub = nh_.advertise<nav_msgs::Path>("/path", 10);
         ctrl_pub = nh_.advertise<autoware_msgs::VehicleCmd>("/vehicle_cmd", 10);
     }
@@ -40,6 +40,13 @@ namespace stanley
         path_pub.publish(path);
     }
 
+/* 
+    void Stanley::PathCallback(const nav_msgs::Path::ConstPtr& msg)
+    {
+        path = *msg;
+    }
+ */
+
     void Stanley::OdomCallback(const nav_msgs::Odometry::ConstPtr& msg)
     {
         vehicle_odom = *msg;
@@ -60,12 +67,13 @@ namespace stanley
         double steering_angle = StanleyAlgorithm(vehicle_odom.pose.pose, path, velocity, cte_coefficient, velocity_coefficient);
         double steering_angle_degree = steering_angle * (180 / M_PI);
 
-        if (steering_angle_degree > 50) steering_angle = 50 * (M_PI / 180);
-        else if (steering_angle_degree < -50) steering_angle = -50 * (M_PI / 180);
+        if (steering_angle_degree > 100) steering_angle = 100 * (M_PI / 180);
+        else if (steering_angle_degree < -100) steering_angle = -100 * (M_PI / 180);
         
         ROS_INFO("Donus Acisi: %f", steering_angle);
 
         autoware_msgs::VehicleCmd ctrl_msg;
+        ctrl_msg.header.stamp = ros::Time::now();
         ctrl_msg.twist_cmd.twist.linear.x = velocity;
         ctrl_msg.twist_cmd.twist.angular.z = steering_angle;
         ctrl_pub.publish(ctrl_msg);
@@ -73,17 +81,23 @@ namespace stanley
 
     double Stanley::StanleyAlgorithm(const geometry_msgs::Pose& current_point_pose, const nav_msgs::Path& t_path, double current_velocity, double Kcte, double Kv)
     {
-        geometry_msgs::Pose closest_point = t_path.poses[ClosestWaypointIndex(current_point_pose, t_path)].pose;
+        int closest_idx = ClosestWaypointIndex(current_point_pose, t_path); 
+        geometry_msgs::Pose closest_point = t_path.poses[closest_idx].pose;
+        double path_yaw = closest_idx+1 < t_path.poses.size() ? std::atan2(t_path.poses[closest_idx+1].pose.position.y - t_path.poses[closest_idx].pose.position.y, t_path.poses[closest_idx+1].pose.position.x - t_path.poses[closest_idx].pose.position.x) : atan2(t_path.poses[closest_idx].pose.position.y - t_path.poses[closest_idx-1].pose.position.y, t_path.poses[closest_idx].pose.position.x - t_path.poses[closest_idx-1].pose.position.x);
+        double current_yaw = GetYaw(current_point_pose.orientation);
 
-        double heading_error = GetYaw(closest_point.orientation) - GetYaw(current_point_pose.orientation);
+        double heading_error = path_yaw - current_yaw;
 
         double transformed_closest_point[3] = {0, 0, 0};
         LocalTransform(current_point_pose, closest_point, transformed_closest_point);
 
+/*         double yaw_to_path = atan2(transformed_closest_point[1], transformed_closest_point[0]);
+        double cte = std::cos(yaw_to_path) * transformed_closest_point[0] - std::sin(yaw_to_path) * transformed_closest_point[1]; */
+
         double cte = std::sqrt(std::pow(transformed_closest_point[0], 2) + std::pow(transformed_closest_point[1], 2));
         if (transformed_closest_point[1] < 0) cte = -cte;
 
-        double steering = heading_error + atan2((cte * Kcte),(Kv * current_velocity));
+        double steering = heading_error + std::atan2((cte * Kcte),(Kv * current_velocity));
 
         while (steering>M_PI) steering -= 2*M_PI;
         while (steering<-M_PI) steering += 2*M_PI;
