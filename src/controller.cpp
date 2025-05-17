@@ -72,8 +72,8 @@ namespace stanley
 
         double current_heading = GetYaw(vehicle_odom.pose.pose.orientation);
 
-        vehicle_odom.pose.pose.position.x += cos(current_heading)*axle_length*1;
-        vehicle_odom.pose.pose.position.y += sin(current_heading)*axle_length*1;
+        vehicle_odom.pose.pose.position.x += cos(current_heading)*axle_length*0.5;
+        vehicle_odom.pose.pose.position.y += sin(current_heading)*axle_length*0.5;
 
         if(input_log)
         {
@@ -87,7 +87,6 @@ namespace stanley
             autoware_msgs::VehicleCmd ctrl_msg;
             ctrl_msg.header.stamp = ros::Time::now();
             ctrl_msg.twist_cmd.twist.linear.x = 0;
-            ctrl_msg.twist_cmd.twist.angular.z = 0;
             ctrl_pub.publish(ctrl_msg);
         }
     }
@@ -122,7 +121,10 @@ namespace stanley
         double path_yaw = CalculatePathYaw(t_path, closest_idx);
         double current_yaw = GetYaw(current_point_pose.orientation);
 
-        ROS_INFO("Path Yaw: %f", path_yaw);
+        if(input_log)
+        {
+            ROS_INFO("Path Yaw: %f", path_yaw);
+        }
 
         geometry_msgs::Pose transformed_closest_point_pose = LocalTransform(current_point_pose, closest_point_pose);
 

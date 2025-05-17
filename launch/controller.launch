@@ -3,6 +3,6 @@
     <node name="controller_node" pkg="stanley_pkg" type="controller_node" output="screen">
         <rosparam command="load" file="$(find stanley_pkg)/config/default.yaml" />
     </node>
-<!--     <node name="csv_logger_node" pkg="csv_logger_pkg" type="csv_logger_node" /> -->
+    <node name="csv_logger_node" pkg="csv_logger_pkg" type="csv_logger_node" />
 
 </launch>
