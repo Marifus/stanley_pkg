@@ -11,25 +11,29 @@ namespace stanley
             ros::requestShutdown();
         }
 
-        path_sub = nh_.subscribe("/shortest_path", 10, &Stanley::PathCallback, this);
-        odom_sub = nh_.subscribe("/odom", 10, &Stanley::OdomCallback, this);
-        path_pub = nh_.advertise<nav_msgs::Path>("/path", 10);
-        ctrl_pub = nh_.advertise<autoware_msgs::VehicleCmd>("/vehicle_cmd", 10);
+        path_sub = nh_.subscribe(path_topic, 10, &Stanley::PathCallback, this);
+        odom_sub = nh_.subscribe(odom_topic, 10, &Stanley::OdomCallback, this);
+        //path_pub = nh_.advertise<nav_msgs::Path>("/path", 10);
+        ctrl_pub = nh_.advertise<autoware_msgs::VehicleCmd>(cmd_topic, 10);
     }
 
 
     bool Stanley::ReadParameters()
     {
-        if (!nh_.getParam("cte_coefficient", cte_coefficient)) return false;
-        if (!nh_.getParam("velocity_coefficient", velocity_coefficient)) return false;
-        if (!nh_.getParam("axle_length", axle_length)) return false;
+        if (!nh_.getParam("coefficients/cte_coefficient", cte_coefficient)) return false;
+        if (!nh_.getParam("coefficients/velocity_coefficient", velocity_coefficient)) return false;
+        if (!nh_.getParam("wheelbase", wheelbase)) return false;
         if (!nh_.getParam("velocity", velocity)) return false;
-        if (!nh_.getParam("input_log", input_log)) return false;
-        if (!nh_.getParam("output_log", output_log)) return false;
+        if (!nh_.getParam("logs/input_log", input_log)) return false;
+        if (!nh_.getParam("logs/output_log", output_log)) return false;
+        if (!nh_.getParam("subscribe_topics/odom_topic", odom_topic)) return false;
+        if (!nh_.getParam("subscribe_topics/path_topic", path_topic)) return false;
+        if (!nh_.getParam("publish_topics/cmd_topic", cmd_topic)) return false;
+
 
         ROS_INFO("CTE Katsayisi: [%f]", cte_coefficient);
         ROS_INFO("Hiz Katsayisi: [%f]", velocity_coefficient);
-        ROS_INFO("Sase Uzunlugu: [%f]", axle_length);
+        ROS_INFO("Dingil Mesafesi: [%f]", wheelbase);
         ROS_INFO("Arac Hizi: [%f]", velocity);
         ROS_INFO("Girdi/Cikti Gosterme: [%d, %d]", input_log, output_log);
 
@@ -72,8 +76,8 @@ namespace stanley
 
         double current_heading = GetYaw(vehicle_odom.pose.pose.orientation);
 
-        vehicle_odom.pose.pose.position.x += cos(current_heading)*axle_length*0.5;
-        vehicle_odom.pose.pose.position.y += sin(current_heading)*axle_length*0.5;
+        vehicle_odom.pose.pose.position.x += cos(current_heading)*wheelbase*0.5;
+        vehicle_odom.pose.pose.position.y += sin(current_heading)*wheelbase*0.5;
 
         if(input_log)
         {

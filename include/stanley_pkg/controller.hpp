@@ -20,15 +20,17 @@ namespace stanley
         ros::NodeHandle& nh_;
         ros::Subscriber path_sub;
         ros::Subscriber odom_sub;
-        ros::Publisher path_pub;
+        //ros::Publisher path_pub;
         ros::Publisher ctrl_pub;
+
+        std::string path_topic, odom_topic, cmd_topic;
 
         nav_msgs::Path path;
         nav_msgs::Odometry vehicle_odom;
 
         double cte_coefficient;
         double velocity_coefficient;
-        double axle_length;
+        double wheelbase;
 
         double velocity;
 

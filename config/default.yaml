@@ -1,6 +1,17 @@
-cte_coefficient: 5
-velocity_coefficient: 1
-axle_length: 0.9842
-velocity: 10
-input_log: false
-output_log: false
+coefficients:
+  cte_coefficient: 2.00           #salınım varsa düşür, yola geç dönüyorsa yükselt
+  velocity_coefficient: 1         #dokanma
+
+wheelbase: 3.5                    #dingil mesafesi/araç uzunluğu
+velocity: 4                       #hız
+
+logs:
+  input_log: false                #işine yaramaz 
+  output_log: false               #işine yaramaz
+
+subscribe_topics:
+  odom_topic: /odom
+  path_topic: /shortest_path
+
+publish_topics:
+  cmd_topic: /vehicle_cmd
