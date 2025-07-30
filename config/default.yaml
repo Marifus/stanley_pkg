@@ -1,9 +1,9 @@
 coefficients:
-  cte_coefficient: 2.00           #salınım varsa düşür, yola geç dönüyorsa yükselt
-  velocity_coefficient: 1         #dokanma
+  cte_coefficient: 1.00           #salınım varsa düşür, yola geç dönüyorsa yükselt
+  velocity_coefficient: 0.5       #dokanma
 
-wheelbase: 3.5                    #dingil mesafesi/araç uzunluğu
-velocity: 4                       #hız
+wheelbase: 3.50                   #dingil mesafesi/araç uzunluğu
+velocity: 4.00                    #hız
 
 logs:
   input_log: false                #işine yaramaz 
@@ -12,6 +12,9 @@ logs:
 subscribe_topics:
   odom_topic: /odom
   path_topic: /shortest_path
+  docking_signal_topic: /docking_signal
 
 publish_topics:
   cmd_topic: /vehicle_cmd
+
+herhangi_bir_sey: 0.5             #saniye boyunca yeni path gelmezse arac durur

@@ -3,7 +3,7 @@
 namespace stanley
 {
 
-    Stanley::Stanley(ros::NodeHandle& nh) : nh_(nh)
+    Stanley::Stanley(ros::NodeHandle& nh) : nh_(nh), docking(false), path_received(false)
     {
         if (!ReadParameters())
         {
@@ -13,8 +13,10 @@ namespace stanley
 
         path_sub = nh_.subscribe(path_topic, 10, &Stanley::PathCallback, this);
         odom_sub = nh_.subscribe(odom_topic, 10, &Stanley::OdomCallback, this);
-        //path_pub = nh_.advertise<nav_msgs::Path>("/path", 10);
+        docking_signal_sub = nh_.subscribe(docking_signal_topic, 10, &Stanley::DockingCallback, this);
         ctrl_pub = nh_.advertise<autoware_msgs::VehicleCmd>(cmd_topic, 10);
+        timer = nh_.createTimer(ros::Duration(herhangi_bir_sey), &Stanley::TimerCallback, this);
+        //path_pub = nh_.advertise<nav_msgs::Path>("/path", 10);
     }
 
 
@@ -28,7 +30,9 @@ namespace stanley
         if (!nh_.getParam("logs/output_log", output_log)) return false;
         if (!nh_.getParam("subscribe_topics/odom_topic", odom_topic)) return false;
         if (!nh_.getParam("subscribe_topics/path_topic", path_topic)) return false;
+        if (!nh_.getParam("subscribe_topics/docking_signal_topic", docking_signal_topic)) return false;
         if (!nh_.getParam("publish_topics/cmd_topic", cmd_topic)) return false;
+        if (!nh_.getParam("herhangi_bir_sey", herhangi_bir_sey)) return false;
 
 
         ROS_INFO("CTE Katsayisi: [%f]", cte_coefficient);
@@ -55,6 +59,7 @@ namespace stanley
     void Stanley::PathCallback(const nav_msgs::Path::ConstPtr& msg)
     {
         path = *msg;
+        path_received = true;
 
         for (int i = 0; i < path.poses.size(); ++i)
         {
@@ -85,20 +90,39 @@ namespace stanley
             ROS_INFO("Mevcut Yaw: [%f]", current_heading);
         }
 
-        if (path.poses.size() != 0) ControlOutput();
-        else
-        {
-            autoware_msgs::VehicleCmd ctrl_msg;
-            ctrl_msg.header.stamp = ros::Time::now();
-            ctrl_msg.twist_cmd.twist.linear.x = 0;
-            ctrl_pub.publish(ctrl_msg);
-        }
+
+        if (path.poses.size() == 0 || docking)
+        {            
+            autoware_msgs::VehicleCmd control_msg;
+            control_msg.twist_cmd.twist.linear.x = 0;
+            ctrl_pub.publish(control_msg);
+        } else ControlOutput();
+    }
+
+
+    void Stanley::DockingCallback(const std_msgs::Bool& msg)
+    {
+        docking = msg.data;
+    }
+
+
+    void Stanley::TimerCallback(const ros::TimerEvent&)
+    {
+        if(!path_received) path.poses.clear();
+        else path_received = false;
     }
 
 
     void Stanley::ControlOutput()
     {
-        double steering_angle = StanleyAlgorithm(vehicle_odom.pose.pose, path, velocity, cte_coefficient, velocity_coefficient);
+        double current_velocity = std::hypot(vehicle_odom.twist.twist.linear.x, vehicle_odom.twist.twist.linear.y);
+
+        if (input_log)
+        {
+            ROS_INFO("Mevcut Hiz: %f", current_velocity);
+        }
+
+        double steering_angle = StanleyAlgorithm(vehicle_odom.pose.pose, path, current_velocity, cte_coefficient, velocity_coefficient);
         double steering_angle_degree = steering_angle * (180 / M_PI);
 
         if (steering_angle_degree > 100) steering_angle = 100 * (M_PI / 180);
@@ -108,6 +132,7 @@ namespace stanley
         {
             ROS_INFO("Donus Acisi: %f", steering_angle);
         }
+
 
         autoware_msgs::VehicleCmd ctrl_msg;
         ctrl_msg.header.stamp = ros::Time::now();
